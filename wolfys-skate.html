@@ -1,0 +1,1036 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Wolfy's Skate Rink 🐺⛸️</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+:root {
+  --bg: #0a0618;
+  --rink: #0d1f3c;
+  --rink2: #0a1a33;
+  --pink: #ff5fa3;
+  --yellow: #ffd94a;
+  --teal: #3de8e6;
+  --purple: #8b5cf6;
+  --orange: #ff8c42;
+  --green: #4ade80;
+  --wall: #1e1144;
+}
+html, body {
+  width: 100%; height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  font-family: 'Nunito', sans-serif;
+  user-select: none;
+}
+
+/* ── HUD ── */
+#hud {
+  position: fixed; top: 0; left: 0; right: 0;
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 8px 14px;
+  background: linear-gradient(180deg, rgba(10,6,24,0.95) 0%, transparent 100%);
+  z-index: 20;
+  pointer-events: none;
+}
+#hud .title {
+  font-family: 'Fredoka One', cursive;
+  font-size: 1.2rem;
+  color: var(--yellow);
+  text-shadow: 2px 2px 0 var(--purple);
+}
+#hud .score-box {
+  font-family: 'Fredoka One', cursive;
+  font-size: 1.1rem;
+  color: white;
+}
+#hud .lives-box { font-size: 1.2rem; }
+
+/* ── CANVAS ── */
+#gameCanvas {
+  display: block;
+  position: fixed;
+  top: 0; left: 0;
+  touch-action: none;
+}
+
+/* ── D-PAD ── */
+#dpad {
+  position: fixed;
+  bottom: 24px; left: 20px;
+  width: 150px; height: 150px;
+  z-index: 20;
+}
+.dpad-btn {
+  position: absolute;
+  width: 48px; height: 48px;
+  background: rgba(255,255,255,0.12);
+  border: 2px solid rgba(255,255,255,0.25);
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.4rem;
+  cursor: pointer;
+  transition: background 0.1s;
+  -webkit-user-select: none;
+}
+.dpad-btn:active, .dpad-btn.pressed {
+  background: rgba(139,92,246,0.5);
+  border-color: var(--purple);
+}
+#btn-up    { top: 0;   left: 50%; transform: translateX(-50%); }
+#btn-down  { bottom: 0; left: 50%; transform: translateX(-50%); }
+#btn-left  { left: 0;  top: 50%;  transform: translateY(-50%); }
+#btn-right { right: 0; top: 50%;  transform: translateY(-50%); }
+#btn-center {
+  position: absolute;
+  top: 50%; left: 50%; transform: translate(-50%,-50%);
+  width: 36px; height: 36px;
+  background: rgba(255,255,255,0.06);
+  border: 2px solid rgba(255,255,255,0.1);
+  border-radius: 50%;
+}
+
+/* ── ACTION BTN ── */
+#action-btn {
+  position: fixed;
+  bottom: 40px; right: 24px;
+  width: 72px; height: 72px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--pink), var(--purple));
+  border: none;
+  font-size: 1.8rem;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(255,95,163,0.5);
+  z-index: 20;
+  display: flex; align-items: center; justify-content: center;
+  transition: transform 0.1s;
+}
+#action-btn:active { transform: scale(0.9); }
+
+/* ── TOAST MESSAGES ── */
+#toast {
+  position: fixed;
+  top: 60px; left: 50%; transform: translateX(-50%);
+  font-family: 'Fredoka One', cursive;
+  font-size: 1.3rem;
+  color: var(--yellow);
+  text-shadow: 2px 2px 0 #000;
+  pointer-events: none;
+  z-index: 30;
+  opacity: 0;
+  transition: opacity 0.3s;
+  white-space: nowrap;
+}
+#toast.show { opacity: 1; }
+
+/* ── OVERLAY SCREENS ── */
+.overlay {
+  position: fixed; inset: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  background: rgba(10,6,24,0.93);
+  z-index: 50;
+  text-align: center;
+  padding: 24px;
+  animation: fadeIn 0.4s ease;
+}
+.overlay h1 {
+  font-family: 'Fredoka One', cursive;
+  font-size: 2.6rem;
+  color: var(--yellow);
+  text-shadow: 3px 3px 0 var(--purple);
+  margin-bottom: 8px;
+}
+.overlay .big-emoji { font-size: 6rem; margin-bottom: 10px; display: block; animation: bounce 1.2s infinite; }
+.overlay p { font-size: 1rem; color: rgba(255,255,255,0.75); margin-bottom: 6px; line-height: 1.6; }
+.overlay .instructions {
+  background: rgba(255,255,255,0.06);
+  border: 2px solid rgba(139,92,246,0.3);
+  border-radius: 16px;
+  padding: 14px 18px;
+  margin: 12px 0 20px;
+  text-align: left;
+  max-width: 340px;
+  font-size: 0.88rem;
+  line-height: 1.8;
+}
+.overlay .instructions b { color: var(--teal); }
+.btn {
+  font-family: 'Fredoka One', cursive;
+  font-size: 1.4rem;
+  padding: 14px 44px;
+  border-radius: 50px;
+  border: none;
+  cursor: pointer;
+  background: linear-gradient(135deg, var(--pink), var(--purple));
+  color: white;
+  box-shadow: 0 6px 20px rgba(139,92,246,0.5);
+  margin: 6px;
+  transition: transform 0.1s;
+}
+.btn:active { transform: scale(0.95); }
+.btn-sec {
+  background: rgba(255,255,255,0.1);
+  box-shadow: none;
+  font-size: 1rem;
+  padding: 10px 28px;
+}
+
+/* flash overlay */
+#flash {
+  position: fixed; inset: 0;
+  pointer-events: none; z-index: 40;
+  opacity: 0; transition: opacity 0.15s;
+}
+#flash.show { opacity: 1; }
+
+@keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-14px)} }
+@keyframes fadeIn { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+
+/* confetti */
+.cdot {
+  position: fixed;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 45;
+  animation: cffall linear forwards;
+}
+@keyframes cffall {
+  0%   { transform: translateY(-10px) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+}
+
+/* mini-map */
+#minimap {
+  position: fixed;
+  bottom: 24px; right: 24px;
+  width: 80px; height: 80px;
+  border: 2px solid rgba(255,255,255,0.15);
+  border-radius: 10px;
+  background: rgba(0,0,0,0.5);
+  z-index: 20;
+  overflow: hidden;
+}
+#minimap canvas { width: 100%; height: 100%; }
+</style>
+</head>
+<body>
+
+<!-- HUD -->
+<div id="hud">
+  <div class="title">🐺 Wolfy's Skate Rink</div>
+  <div class="score-box">⭐ <span id="score-val">0</span></div>
+  <div class="lives-box" id="lives-val">💖💖💖</div>
+</div>
+
+<!-- CANVAS -->
+<canvas id="gameCanvas"></canvas>
+
+<!-- D-PAD -->
+<div id="dpad">
+  <div class="dpad-btn" id="btn-up">▲</div>
+  <div class="dpad-btn" id="btn-left">◀</div>
+  <div class="dpad-btn" id="btn-right">▶</div>
+  <div class="dpad-btn" id="btn-down">▼</div>
+  <div id="btn-center"></div>
+</div>
+
+<!-- ACTION BUTTON -->
+<button id="action-btn" title="Spin!">💫</button>
+
+<!-- MINIMAP -->
+<div id="minimap"><canvas id="mmCanvas"></canvas></div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<!-- FLASH -->
+<div id="flash"></div>
+
+<!-- START SCREEN -->
+<div class="overlay" id="start-screen">
+  <span class="big-emoji">🐺</span>
+  <h1>Wolfy's Skate Rink!</h1>
+  <div class="instructions">
+    <b>⛸️ Skate</b> around the Pizzaplex!<br>
+    <b>⭐ Collect</b> stars for points<br>
+    <b>🍕 Grab</b> pizza slices for bonus lives<br>
+    <b>🔑 Find</b> hidden keys to unlock rooms<br>
+    <b>👾 Dodge</b> the monsters — or use 💫 to spin them away!<br>
+    <b>🏆 Goal:</b> Get 200 stars to win!
+  </div>
+  <button class="btn" onclick="startGame()">⛸️ Let's Skate!</button>
+</div>
+
+<!-- GAME OVER SCREEN -->
+<div class="overlay" id="gameover-screen" style="display:none">
+  <span style="font-size:5rem;display:block;margin-bottom:10px">😱</span>
+  <h1 style="color:var(--pink)">Uh oh, Wolfy!</h1>
+  <p id="go-msg" style="font-size:1.1rem;color:var(--yellow);margin:10px 0"></p>
+  <button class="btn" onclick="restartGame()">🔄 Try Again!</button>
+</div>
+
+<!-- WIN SCREEN -->
+<div class="overlay" id="win-screen" style="display:none">
+  <span class="big-emoji">🏆</span>
+  <h1>You Win!!</h1>
+  <p style="font-size:1.1rem;color:var(--teal);margin:8px 0">Amazing skating, Wolfy! 🐺⛸️✨</p>
+  <p id="win-score" style="color:var(--yellow);font-size:1.2rem;font-family:'Fredoka One',cursive;margin-bottom:16px"></p>
+  <button class="btn" onclick="restartGame()">🔄 Play Again!</button>
+</div>
+
+<script>
+// ═══════════════════════════════════════════
+//  SETUP
+// ═══════════════════════════════════════════
+const canvas = document.getElementById('gameCanvas');
+const ctx    = canvas.getContext('2d');
+const mm     = document.getElementById('mmCanvas');
+const mctx   = mm.getContext('2d');
+
+let W, H;
+function resize() {
+  W = canvas.width  = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+  mm.width = mm.height = 80;
+}
+resize();
+window.addEventListener('resize', () => { resize(); });
+
+// ═══════════════════════════════════════════
+//  WORLD / MAP
+// ═══════════════════════════════════════════
+const WORLD = 2000;  // world is 2000×2000
+const TILE  = 80;
+
+// Room definitions (x,y,w,h in world coords)
+const ROOMS = [
+  { id:'rink',    x:80,   y:80,   w:900, h:700, color:'#0d1f3c', name:'Main Rink',    unlocked:true  },
+  { id:'stage',   x:1000, y:80,   w:500, h:350, color:'#1a0d2e', name:'Stage',         unlocked:false },
+  { id:'kitchen', x:1000, y:480,  w:500, h:300, color:'#0d2010', name:'Kitchen',       unlocked:false },
+  { id:'party',   x:80,   y:840,  w:600, h:400, color:'#1a1000', name:'Party Room',    unlocked:false },
+  { id:'arcade',  x:740,  y:840,  w:760, h:400, color:'#0d0d20', name:'Arcade',        unlocked:false },
+];
+
+const WALLS = [
+  // outer boundary walls handled by clamping
+  // internal dividers
+  { x:980,  y:80,   w:20,  h:700 },
+  { x:980,  y:430,  w:520, h:20  },
+  { x:980,  y:780,  w:20,  h:470 },
+  { x:80,   y:820,  w:660, h:20  },
+  { x:720,  y:820,  w:780, h:20  },
+  // doors (gaps in walls) handled by leaving spaces
+];
+
+// Door positions (openings in dividers)
+const DOORS = [
+  { x:980, y:380, w:20, h:100, leadsTo:'stage',   keyColor:'#ffd94a' },
+  { x:980, y:600, w:20, h:100, leadsTo:'kitchen', keyColor:'#4ade80' },
+  { x:380, y:820, w:100,h:20,  leadsTo:'party',   keyColor:'#ff8c42' },
+  { x:900, y:820, w:100,h:20,  leadsTo:'arcade',  keyColor:'#3de8e6' },
+];
+
+// ═══════════════════════════════════════════
+//  GAME STATE
+// ═══════════════════════════════════════════
+let G = {};
+
+function initGame() {
+  G = {
+    score: 0,
+    lives: 3,
+    spinCharge: 3,
+    won: false,
+    over: false,
+    invincible: 0,
+    // camera
+    camX: 0, camY: 0,
+    // player
+    p: {
+      x: 480, y: 380,
+      vx: 0, vy: 0,
+      speed: 3.5,
+      facing: 1, // 1=right, -1=left
+      spinning: 0,
+      frame: 0,
+      frameTimer: 0,
+    },
+    // collectibles
+    stars:  [],
+    pizzas: [],
+    keys:   [],
+    // monsters
+    monsters: [],
+    monsterSpawnTimer: 0,
+    // particles
+    particles: [],
+    // discovered rooms
+    discovered: { rink: true },
+    // keys collected
+    keysHeld: [],
+    // message queue
+    msgTimer: 0,
+    // input
+    keys_held: {},
+  };
+
+  spawnStars(30);
+  spawnPizzas(5);
+  spawnMapKeys();
+  spawnMonsters(3);
+}
+
+// ═══════════════════════════════════════════
+//  SPAWNERS
+// ═══════════════════════════════════════════
+function randRoom(roomId) {
+  const r = ROOMS.find(r => r.id === roomId) || ROOMS[0];
+  return {
+    x: r.x + 40 + Math.random() * (r.w - 80),
+    y: r.y + 40 + Math.random() * (r.h - 80),
+  };
+}
+
+function spawnStars(n) {
+  for (let i = 0; i < n; i++) {
+    const pos = randRoom('rink');
+    G.stars.push({ x: pos.x, y: pos.y, r: 12, bob: Math.random()*Math.PI*2, collected: false });
+  }
+}
+
+function spawnPizzas(n) {
+  for (let i = 0; i < n; i++) {
+    const pos = randRoom('rink');
+    G.pizzas.push({ x: pos.x, y: pos.y, collected: false });
+  }
+}
+
+function spawnMapKeys() {
+  const keyColors = ['#ffd94a','#4ade80','#ff8c42','#3de8e6'];
+  const keyRooms  = ['rink','rink','rink','rink'];
+  keyColors.forEach((col, i) => {
+    const pos = randRoom(keyRooms[i]);
+    G.keys.push({ x: pos.x, y: pos.y, color: col, collected: false, doorIdx: i });
+  });
+}
+
+function spawnMonsters(n) {
+  const emojis = ['🦊','🐰','🐥','👻'];
+  for (let i = 0; i < n; i++) {
+    let pos;
+    do { pos = randRoom('rink'); }
+    while (dist(pos.x, pos.y, G.p.x, G.p.y) < 300);
+    G.monsters.push({
+      x: pos.x, y: pos.y,
+      vx: (Math.random()-0.5)*2,
+      vy: (Math.random()-0.5)*2,
+      speed: 1.2 + Math.random()*0.8,
+      emoji: emojis[i % emojis.length],
+      stunTimer: 0,
+      size: 28,
+    });
+  }
+}
+
+// ═══════════════════════════════════════════
+//  INPUT
+// ═══════════════════════════════════════════
+const keys_held = {};
+document.addEventListener('keydown', e => { keys_held[e.key] = true; });
+document.addEventListener('keyup',   e => { keys_held[e.key] = false; });
+
+// D-pad touch
+['up','down','left','right'].forEach(dir => {
+  const btn = document.getElementById('btn-'+dir);
+  const evOn  = e => { e.preventDefault(); keys_held[dir] = true;  btn.classList.add('pressed'); };
+  const evOff = e => { e.preventDefault(); keys_held[dir] = false; btn.classList.remove('pressed'); };
+  btn.addEventListener('touchstart', evOn,  { passive:false });
+  btn.addEventListener('touchend',   evOff, { passive:false });
+  btn.addEventListener('mousedown',  evOn);
+  btn.addEventListener('mouseup',    evOff);
+});
+
+// Action button (spin)
+document.getElementById('action-btn').addEventListener('click', doSpin);
+document.addEventListener('keydown', e => { if(e.key===' ') doSpin(); });
+
+function doSpin() {
+  if (!G || G.over || G.won) return;
+  if (G.spinCharge <= 0) { showToast('No spin left! Grab ⭐ to recharge!'); return; }
+  G.p.spinning = 40;
+  G.spinCharge--;
+  updateHUD();
+  // knock back nearby monsters
+  G.monsters.forEach(m => {
+    if (dist(m.x, m.y, G.p.x, G.p.y) < 120) {
+      m.stunTimer = 120;
+      const ang = Math.atan2(m.y - G.p.y, m.x - G.p.x);
+      m.vx = Math.cos(ang) * 5;
+      m.vy = Math.sin(ang) * 5;
+      spawnParticles(m.x, m.y, '#ff5fa3', 8);
+      showToast('💫 Monster stunned!');
+    }
+  });
+}
+
+// ═══════════════════════════════════════════
+//  GAME LOOP
+// ═══════════════════════════════════════════
+let lastTime = 0;
+let running  = false;
+
+function gameLoop(ts) {
+  if (!running) return;
+  const dt = Math.min((ts - lastTime)/16.67, 3);
+  lastTime = ts;
+  update(dt);
+  draw();
+  requestAnimationFrame(gameLoop);
+}
+
+function startGame() {
+  document.getElementById('start-screen').style.display = 'none';
+  initGame();
+  running = true;
+  lastTime = performance.now();
+  requestAnimationFrame(gameLoop);
+}
+
+function restartGame() {
+  document.getElementById('gameover-screen').style.display = 'none';
+  document.getElementById('win-screen').style.display     = 'none';
+  document.querySelectorAll('.cdot').forEach(e=>e.remove());
+  initGame();
+  updateHUD();
+  running = true;
+  lastTime = performance.now();
+  requestAnimationFrame(gameLoop);
+}
+
+// ═══════════════════════════════════════════
+//  UPDATE
+// ═══════════════════════════════════════════
+function update(dt) {
+  if (G.over || G.won) return;
+
+  const p = G.p;
+
+  // — Input acceleration —
+  let ax = 0, ay = 0;
+  if (keys_held['left']  || keys_held['ArrowLeft'])  { ax -= 1; p.facing = -1; }
+  if (keys_held['right'] || keys_held['ArrowRight']) { ax += 1; p.facing =  1; }
+  if (keys_held['up']    || keys_held['ArrowUp'])    { ay -= 1; }
+  if (keys_held['down']  || keys_held['ArrowDown'])  { ay += 1; }
+
+  // Normalize diagonal
+  if (ax !== 0 && ay !== 0) { ax *= 0.707; ay *= 0.707; }
+
+  // Skate physics: smooth acceleration & friction
+  p.vx += ax * 0.7 * dt;
+  p.vy += ay * 0.7 * dt;
+  const maxSpd = p.speed * dt;
+  const spd = Math.sqrt(p.vx*p.vx + p.vy*p.vy);
+  if (spd > maxSpd) { p.vx = p.vx/spd*maxSpd; p.vy = p.vy/spd*maxSpd; }
+  // Friction
+  p.vx *= 0.88;
+  p.vy *= 0.88;
+
+  p.x += p.vx;
+  p.y += p.vy;
+
+  // Clamp to world
+  p.x = Math.max(30, Math.min(WORLD-30, p.x));
+  p.y = Math.max(30, Math.min(WORLD-30, p.y));
+
+  // Wall collision
+  WALLS.forEach(w => {
+    if (rectCircle(w.x, w.y, w.w, w.h, p.x, p.y, 20)) {
+      // Check doors first
+      const inDoor = DOORS.some(d => {
+        const unlocked = G.keysHeld.includes(d.doorIdx) || ROOMS.find(r=>r.id===d.leadsTo)?.unlocked;
+        return unlocked && rectCircle(d.x, d.y, d.w, d.h, p.x, p.y, 20);
+      });
+      if (!inDoor) {
+        // Push out
+        const cx = w.x + w.w/2, cy = w.y + w.h/2;
+        const dx = p.x - cx, dy = p.y - cy;
+        const overlapX = (w.w/2 + 20) - Math.abs(dx);
+        const overlapY = (w.h/2 + 20) - Math.abs(dy);
+        if (overlapX < overlapY) { p.x += Math.sign(dx)*overlapX*1.1; p.vx *= -0.3; }
+        else                     { p.y += Math.sign(dy)*overlapY*1.1; p.vy *= -0.3; }
+      }
+    }
+  });
+
+  // Check door unlocking
+  DOORS.forEach((d, i) => {
+    if (!G.keysHeld.includes(i) && rectCircle(d.x, d.y, d.w, d.h, p.x, p.y, 24)) {
+      const hasKey = G.keysHeld.includes(i);
+      // door just touched — check if we have key
+    }
+  });
+
+  // Spinning animation
+  if (p.spinning > 0) p.spinning--;
+
+  // Animation frame
+  p.frameTimer++;
+  if (p.frameTimer > 8) { p.frameTimer = 0; p.frame = (p.frame+1)%4; }
+
+  // Invincibility
+  if (G.invincible > 0) G.invincible--;
+
+  // — Camera: follow player —
+  const targetCX = p.x - W/2;
+  const targetCY = p.y - H/2;
+  G.camX += (targetCX - G.camX) * 0.1;
+  G.camY += (targetCY - G.camY) * 0.1;
+  G.camX = Math.max(0, Math.min(WORLD-W, G.camX));
+  G.camY = Math.max(0, Math.min(WORLD-H, G.camY));
+
+  // — Stars —
+  G.stars.forEach(s => {
+    if (s.collected) return;
+    s.bob += 0.08;
+    if (dist(s.x, s.y, p.x, p.y) < 28) {
+      s.collected = true;
+      G.score += 10;
+      if (G.score % 50 === 0) { G.spinCharge = Math.min(G.spinCharge+1, 5); showToast('💫 Spin recharged!'); }
+      spawnParticles(s.x, s.y, '#ffd94a', 5);
+      updateHUD();
+      if (G.score >= 200) { winGame(); return; }
+    }
+  });
+
+  // Respawn stars
+  const alive = G.stars.filter(s=>!s.collected).length;
+  if (alive < 8) spawnStars(10);
+
+  // — Pizzas —
+  G.pizzas.forEach(pz => {
+    if (pz.collected) return;
+    if (dist(pz.x, pz.y, p.x, p.y) < 30) {
+      pz.collected = true;
+      G.lives = Math.min(G.lives+1, 5);
+      showToast('🍕 Extra life!');
+      spawnParticles(pz.x, pz.y, '#ff8c42', 6);
+      updateHUD();
+    }
+  });
+  // Respawn pizzas
+  if (G.pizzas.filter(p=>!p.collected).length < 2) spawnPizzas(3);
+
+  // — Keys —
+  G.keys.forEach((k, i) => {
+    if (k.collected) return;
+    if (dist(k.x, k.y, p.x, p.y) < 28) {
+      k.collected = true;
+      G.keysHeld.push(k.doorIdx);
+      const room = ROOMS.find(r => r.id === DOORS[k.doorIdx].leadsTo);
+      if (room) room.unlocked = true;
+      showToast(`🔑 ${room ? room.name : 'Room'} unlocked!`);
+      spawnParticles(k.x, k.y, k.color, 8);
+      G.score += 25;
+      updateHUD();
+    }
+  });
+
+  // — Monsters —
+  G.monsterSpawnTimer++;
+  if (G.monsterSpawnTimer > 600 && G.monsters.filter(m=>m.stunTimer<=0).length < 5) {
+    G.monsterSpawnTimer = 0;
+    let pos;
+    do { pos = randRoom('rink'); } while (dist(pos.x,pos.y,p.x,p.y)<300);
+    const emojis=['🦊','🐰','🐥','👻'];
+    G.monsters.push({ x:pos.x,y:pos.y,vx:0,vy:0,speed:1.3+G.score/500,emoji:emojis[Math.floor(Math.random()*4)],stunTimer:0,size:28 });
+  }
+
+  G.monsters.forEach(m => {
+    if (m.stunTimer > 0) {
+      m.stunTimer--;
+      m.vx *= 0.9; m.vy *= 0.9;
+      m.x += m.vx; m.y += m.vy;
+      return;
+    }
+    // Chase player
+    const ang = Math.atan2(p.y - m.y, p.x - m.x);
+    m.vx += Math.cos(ang) * 0.12;
+    m.vy += Math.sin(ang) * 0.12;
+    const ms = Math.sqrt(m.vx*m.vx + m.vy*m.vy);
+    if (ms > m.speed) { m.vx = m.vx/ms*m.speed; m.vy = m.vy/ms*m.speed; }
+    m.x += m.vx * dt; m.y += m.vy * dt;
+    // Clamp to world
+    m.x = Math.max(30, Math.min(WORLD-30, m.x));
+    m.y = Math.max(30, Math.min(WORLD-30, m.y));
+
+    // Hit player
+    if (G.invincible <= 0 && dist(m.x, m.y, p.x, p.y) < 36) {
+      if (p.spinning > 0) {
+        m.stunTimer = 120;
+        m.vx = Math.cos(ang+Math.PI)*4; m.vy = Math.sin(ang+Math.PI)*4;
+        spawnParticles(m.x,m.y,'#ff5fa3',8);
+        showToast('⛸️ Spin blocked it!');
+      } else {
+        G.lives--;
+        G.invincible = 120;
+        spawnParticles(p.x, p.y, '#ff5fa3', 10);
+        doFlash('rgba(231,76,60,0.4)');
+        updateHUD();
+        if (G.lives <= 0) { gameOver(); return; }
+        showToast('💥 Ouch! ' + '💖'.repeat(G.lives));
+      }
+    }
+  });
+
+  // — Particles —
+  G.particles = G.particles.filter(p => p.life > 0);
+  G.particles.forEach(p => {
+    p.x += p.vx; p.y += p.vy;
+    p.vy += 0.1;
+    p.life--;
+    p.r = p.life / p.maxLife * p.maxR;
+  });
+}
+
+// ═══════════════════════════════════════════
+//  DRAW
+// ═══════════════════════════════════════════
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+
+  ctx.save();
+  ctx.translate(-G.camX, -G.camY);
+
+  // — Background —
+  ctx.fillStyle = '#06040f';
+  ctx.fillRect(0, 0, WORLD, WORLD);
+
+  // — Rooms —
+  ROOMS.forEach(room => {
+    const unlocked = room.unlocked;
+    ctx.fillStyle = unlocked ? room.color : '#0a0818';
+    ctx.fillRect(room.x, room.y, room.w, room.h);
+
+    // Rink floor pattern (only main rink)
+    if (room.id === 'rink' && unlocked) {
+      // Tile grid
+      ctx.strokeStyle = 'rgba(61,232,230,0.04)';
+      ctx.lineWidth = 1;
+      for (let tx = room.x; tx < room.x+room.w; tx += TILE) {
+        ctx.beginPath(); ctx.moveTo(tx, room.y); ctx.lineTo(tx, room.y+room.h); ctx.stroke();
+      }
+      for (let ty = room.y; ty < room.y+room.h; ty += TILE) {
+        ctx.beginPath(); ctx.moveTo(room.x, ty); ctx.lineTo(room.x+room.w, ty); ctx.stroke();
+      }
+      // Center circle
+      ctx.strokeStyle = 'rgba(255,95,163,0.12)';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(room.x+room.w/2, room.y+room.h/2, 180, 0, Math.PI*2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(room.x+room.w/2, room.y+room.h/2, 80, 0, Math.PI*2);
+      ctx.stroke();
+    }
+
+    // Room label
+    ctx.fillStyle = unlocked ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.07)';
+    ctx.font = "bold 22px 'Nunito', sans-serif";
+    ctx.textAlign = 'center';
+    ctx.fillText((unlocked ? '' : '🔒 ') + room.name, room.x+room.w/2, room.y+36);
+  });
+
+  // — Walls (dividers) —
+  WALLS.forEach(w => {
+    ctx.fillStyle = '#1e1144';
+    ctx.fillRect(w.x, w.y, w.w, w.h);
+    // glowing edge
+    ctx.strokeStyle = 'rgba(139,92,246,0.4)';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(w.x, w.y, w.w, w.h);
+  });
+
+  // — Doors —
+  DOORS.forEach((d, i) => {
+    const unlocked = G.keysHeld.includes(i) || ROOMS.find(r=>r.id===d.leadsTo)?.unlocked;
+    ctx.fillStyle = unlocked ? d.keyColor + '44' : '#0a0618';
+    ctx.fillRect(d.x, d.y, d.w, d.h);
+    if (!unlocked) {
+      ctx.font = '18px serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('🔒', d.x+d.w/2, d.y+d.h/2+6);
+    } else {
+      ctx.fillStyle = d.keyColor + '88';
+      ctx.fillRect(d.x, d.y, d.w, d.h);
+    }
+  });
+
+  // — Stars —
+  G.stars.forEach(s => {
+    if (s.collected) return;
+    const bobY = Math.sin(s.bob) * 4;
+    ctx.save();
+    ctx.translate(s.x, s.y + bobY);
+    drawStar5(ctx, 0, 0, s.r, '#ffd94a', 'rgba(255,217,74,0.3)');
+    ctx.restore();
+  });
+
+  // — Pizzas —
+  G.pizzas.forEach(pz => {
+    if (pz.collected) return;
+    ctx.font = '28px serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('🍕', pz.x, pz.y+10);
+  });
+
+  // — Keys —
+  G.keys.forEach(k => {
+    if (k.collected) return;
+    const t = Date.now()/800;
+    ctx.save();
+    ctx.translate(k.x, k.y + Math.sin(t)*5);
+    ctx.font = '26px serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('🔑', 0, 10);
+    // glow ring
+    ctx.strokeStyle = k.color;
+    ctx.lineWidth = 2;
+    ctx.globalAlpha = 0.5 + 0.5*Math.sin(t*2);
+    ctx.beginPath(); ctx.arc(0, 0, 20, 0, Math.PI*2); ctx.stroke();
+    ctx.restore();
+  });
+
+  // — Monsters —
+  G.monsters.forEach(m => {
+    ctx.save();
+    ctx.translate(m.x, m.y);
+    if (m.stunTimer > 0) {
+      ctx.globalAlpha = 0.5 + 0.5*Math.sin(m.stunTimer*0.3);
+      ctx.font = '18px serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('💫', 0, -30);
+    }
+    ctx.font = `${m.size}px serif`;
+    ctx.textAlign = 'center';
+    ctx.fillText(m.emoji, 0, 10);
+    ctx.restore();
+  });
+
+  // — Particles —
+  G.particles.forEach(p => {
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, Math.max(0,p.r), 0, Math.PI*2);
+    ctx.fillStyle = p.color;
+    ctx.globalAlpha = p.life / p.maxLife;
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  });
+
+  // — Player (Wolfy on skates) —
+  drawWolfy(ctx, G.p);
+
+  ctx.restore(); // end camera transform
+
+  // — Minimap —
+  drawMinimap();
+}
+
+function drawWolfy(ctx, p) {
+  ctx.save();
+  ctx.translate(p.x, p.y);
+
+  // Invincibility flicker
+  if (G.invincible > 0 && Math.floor(G.invincible/6)%2===0) {
+    ctx.globalAlpha = 0.4;
+  }
+
+  if (p.spinning > 0) {
+    const angle = (p.spinning / 40) * Math.PI * 4;
+    ctx.rotate(angle);
+  } else {
+    ctx.scale(p.facing, 1);
+  }
+
+  // Shadow
+  ctx.beginPath();
+  ctx.ellipse(0, 18, 18, 6, 0, 0, Math.PI*2);
+  ctx.fillStyle = 'rgba(0,0,0,0.3)';
+  ctx.fill();
+
+  // Skate glow
+  ctx.beginPath();
+  ctx.ellipse(0, 20, 14, 4, 0, 0, Math.PI*2);
+  ctx.strokeStyle = 'rgba(61,232,230,0.6)';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Body
+  ctx.font = '38px serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('🐺', 0, 8);
+
+  // Skate wheels sparkle
+  const t = Date.now()/200;
+  [-10, 8].forEach((ox, i) => {
+    ctx.beginPath();
+    ctx.arc(ox + Math.sin(t+i)*2, 22, 3, 0, Math.PI*2);
+    ctx.fillStyle = '#3de8e6';
+    ctx.fill();
+  });
+
+  ctx.restore();
+}
+
+function drawStar5(ctx, cx, cy, r, fill, glow) {
+  // 5-point star
+  ctx.save();
+  // glow
+  ctx.beginPath();
+  for (let i=0;i<5;i++){
+    const a1 = Math.PI/2 + i*2*Math.PI/5;
+    const a2 = Math.PI/2 + (i+0.5)*2*Math.PI/5;
+    i===0 ? ctx.moveTo(cx+Math.cos(a1)*r*1.6, cy-Math.sin(a1)*r*1.6)
+           : ctx.lineTo(cx+Math.cos(a1)*r*1.6, cy-Math.sin(a1)*r*1.6);
+    ctx.lineTo(cx+Math.cos(a2)*r*0.7, cy-Math.sin(a2)*r*0.7);
+  }
+  ctx.closePath();
+  ctx.fillStyle = glow;
+  ctx.fill();
+  // star
+  ctx.beginPath();
+  for (let i=0;i<5;i++){
+    const a1 = Math.PI/2 + i*2*Math.PI/5;
+    const a2 = Math.PI/2 + (i+0.5)*2*Math.PI/5;
+    i===0 ? ctx.moveTo(cx+Math.cos(a1)*r, cy-Math.sin(a1)*r)
+           : ctx.lineTo(cx+Math.cos(a1)*r, cy-Math.sin(a1)*r);
+    ctx.lineTo(cx+Math.cos(a2)*r*0.4, cy-Math.sin(a2)*r*0.4);
+  }
+  ctx.closePath();
+  ctx.fillStyle = fill;
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawMinimap() {
+  const scale = 80 / WORLD;
+  mctx.clearRect(0, 0, 80, 80);
+  mctx.fillStyle = '#06040f';
+  mctx.fillRect(0,0,80,80);
+  // rooms
+  ROOMS.forEach(r => {
+    mctx.fillStyle = r.unlocked ? '#1a3060' : '#110d22';
+    mctx.fillRect(r.x*scale, r.y*scale, r.w*scale, r.h*scale);
+  });
+  // stars
+  G.stars.filter(s=>!s.collected).forEach(s => {
+    mctx.fillStyle = '#ffd94a';
+    mctx.fillRect(s.x*scale-1, s.y*scale-1, 2, 2);
+  });
+  // monsters
+  G.monsters.forEach(m => {
+    mctx.fillStyle = '#ff5fa3';
+    mctx.fillRect(m.x*scale-2, m.y*scale-2, 4, 4);
+  });
+  // player
+  mctx.fillStyle = '#3de8e6';
+  mctx.beginPath();
+  mctx.arc(G.p.x*scale, G.p.y*scale, 3, 0, Math.PI*2);
+  mctx.fill();
+  // viewport
+  mctx.strokeStyle = 'rgba(255,255,255,0.2)';
+  mctx.lineWidth = 1;
+  mctx.strokeRect(G.camX*scale, G.camY*scale, W*scale, H*scale);
+}
+
+// ═══════════════════════════════════════════
+//  END STATES
+// ═══════════════════════════════════════════
+function gameOver() {
+  G.over = true;
+  running = false;
+  document.getElementById('go-msg').textContent = `Score: ⭐ ${G.score} — So close, Wolfy!`;
+  document.getElementById('gameover-screen').style.display = 'flex';
+}
+
+function winGame() {
+  G.won = true;
+  running = false;
+  document.getElementById('win-score').textContent = `Final Score: ⭐ ${G.score}`;
+  document.getElementById('win-screen').style.display = 'flex';
+  launchConfetti();
+}
+
+// ═══════════════════════════════════════════
+//  HELPERS
+// ═══════════════════════════════════════════
+function dist(ax, ay, bx, by) {
+  return Math.sqrt((ax-bx)**2 + (ay-by)**2);
+}
+
+function rectCircle(rx, ry, rw, rh, cx, cy, cr) {
+  const nearX = Math.max(rx, Math.min(cx, rx+rw));
+  const nearY = Math.max(ry, Math.min(cy, ry+rh));
+  return dist(nearX, nearY, cx, cy) < cr;
+}
+
+function spawnParticles(x, y, color, n) {
+  for (let i=0; i<n; i++) {
+    const ang = Math.random()*Math.PI*2;
+    const spd = 1+Math.random()*3;
+    G.particles.push({
+      x, y,
+      vx: Math.cos(ang)*spd, vy: Math.sin(ang)*spd-2,
+      color,
+      r: 4+Math.random()*4, maxR: 4+Math.random()*4,
+      life: 30+Math.random()*20, maxLife: 50,
+    });
+  }
+}
+
+function updateHUD() {
+  document.getElementById('score-val').textContent = G.score;
+  const hearts = G.lives <= 0 ? '💔' :
+    '💖'.repeat(Math.min(G.lives,5));
+  document.getElementById('lives-val').textContent = hearts;
+  document.getElementById('action-btn').textContent =
+    G.spinCharge > 0 ? '💫' : '😮‍💨';
+}
+
+let toastTimer;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2000);
+}
+
+function doFlash(color) {
+  const el = document.getElementById('flash');
+  el.style.background = color;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 200);
+}
+
+function launchConfetti() {
+  const colors = ['#ffd94a','#ff5fa3','#3de8e6','#8b5cf6','#ff8c42','#4ade80'];
+  for (let i=0; i<80; i++) {
+    const d = document.createElement('div');
+    d.className = 'cdot';
+    d.style.cssText = `
+      left:${Math.random()*100}%;
+      background:${colors[Math.floor(Math.random()*colors.length)]};
+      width:${6+Math.random()*8}px; height:${6+Math.random()*8}px;
+      animation-duration:${1.5+Math.random()*2.5}s;
+      animation-delay:${Math.random()}s;
+    `;
+    document.body.appendChild(d);
+  }
+}
+</script>
+</body>
+</html>
